@@ -38,6 +38,8 @@ http://10.10.10.56/cgi-bin/user.sh
 
 只有一条，结合较低版本的ubuntu、题目名和cgi，考虑是shellshock
 
+> 完成后补充，这个地方应该nikto能够检测到
+
 ### Shellshock利用
 
 检测
