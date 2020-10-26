@@ -4,9 +4,9 @@
 
 ## Linux进度
 
-攻克中或下一个目标：	Nibbles
+攻克中或下一个目标：	beep
 
 ## Windows进度
 
-攻克中或下一个目标：	**Devel**
+攻克中或下一个目标：	**Optimum**
 
