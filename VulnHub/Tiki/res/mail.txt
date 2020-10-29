@@ -1,0 +1,9 @@
+Hi Silky
+because of a current Breach we had to change all Passwords,
+please note that it was a 0day, we don't know how he made it.
+
+Your new CMS-password is now 51lky571k1, 
+please investigate how he made it into our Admin Panel.
+
+Cheers Boss.
+
