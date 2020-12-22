@@ -14,16 +14,10 @@ https://docs.google.com/spreadsheets/u/1/d/1dwSMIAPIam0PuRBkCiDI88pU3yzrqqHkDtBn
 - [ ] Falafel
 - [ ] Zipper
 - [ ] Unattended
-- [ ] Help
+- [x] **(Skipped)**Help
 - [ ] Mango [Focus on creating your own Boolean Script
 
 ### Windows Boxes(in TODO)
 
 - [ ] JSON
-
-### More Challenging
-
-- [ ] Arkham
-- [ ] Hackback
-- [ ] Holiday
 
